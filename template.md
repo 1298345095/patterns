@@ -1,44 +1,42 @@
-# A succinct name for the pattern
+# 用一个简洁的名称概括模式
 
-## Description
+## 描述
 
-A short, prose description of the pattern.
+用简短的文字描述这个模式。
 
-## Example
+## 示例
 
 ```rust
-// An example of the pattern in action, should be mostly code, commented
-// liberally.
+// 展示这个模式实际用法的示例，应以代码为主，
+// 并配上充分的注释。
 ```
 
-When writing examples, please try to make them compile. This allows us to test
-them. If you fail to write an example that is both complete and readable, please
-at least mark your example code with `ignore` as in here:
+编写示例时，请尽量让它能够编译，这样我们才能测试它。
+如果无法写出一个既完整又易读的示例，请至少像下面这样， 为代码块加上 `ignore`
+标记：
 
 ```rust,ignore
-// A non-runnable example of the pattern in action, should be mostly code, commented
-// liberally.
+// 无法直接运行的模式示例，应以代码为主，
+// 并配上充分的注释。
 ```
 
-## Motivation
+## 动机
 
-Why and where you should use the pattern
+说明为什么使用这个模式，以及它适用于哪些场景。
 
-## Advantages
+## 优点
 
-Good things about this pattern.
+介绍这个模式带来的好处。
 
-## Disadvantages
+## 缺点
 
-Bad things about this pattern. Possible contraindications.
+介绍这个模式的不足，以及可能不适合使用它的情况。
 
-## Discussion
+## 讨论
 
-A deeper discussion about this pattern. You might want to cover how this is done
-in other languages, alternative approaches, why this is particularly nice in
-Rust, etc.
+对这个模式展开更深入的讨论。可以介绍其他语言如何实现它、有哪些替代方案，
+以及为什么它在 Rust 中特别有用等。
 
-## See also
+## 另请参阅
 
-Related patterns (link to the pattern file). Versions of this pattern in other
-languages.
+列出相关模式，并链接到相应的模式文件。也可以列出这个模式在其他语言中的实现。

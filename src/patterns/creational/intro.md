@@ -1,9 +1,7 @@
-# Creational Patterns
+# 创建型模式
 
-From [Wikipedia](https://en.wikipedia.org/wiki/Creational_pattern):
+摘自[维基百科](https://en.wikipedia.org/wiki/Creational_pattern)：
 
-> Design patterns that deal with object creation mechanisms, trying to create
-> objects in a manner suitable to the situation. The basic form of object
-> creation could result in design problems or in added complexity to the design.
-> Creational design patterns solve this problem by somehow controlling this
-> object creation.
+> 这类设计模式关注对象的创建机制，力求以适合当前情境的方式创建对象。
+> 最基本的对象创建方式可能引发设计问题，也可能让设计变得更加复杂。
+> 创建型设计模式通过对对象的创建过程施加某种控制来解决这些问题。

@@ -1,6 +1,5 @@
-# Behavioural Patterns
+# 行为型模式
 
-From [Wikipedia](https://en.wikipedia.org/wiki/Behavioral_pattern):
+摘自[维基百科](https://en.wikipedia.org/wiki/Behavioral_pattern)：
 
-> Design patterns that identify common communication patterns among objects. By
-> doing so, these patterns increase flexibility in carrying out communication.
+> 这类设计模式提炼对象之间常见的通信方式，从而提高对象通信的灵活性。

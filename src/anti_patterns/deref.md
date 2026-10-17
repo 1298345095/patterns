@@ -1,14 +1,12 @@
-# `Deref` polymorphism
+# `Deref` 多态
 
-## Description
+## 描述
 
-Misuse the `Deref` trait to emulate inheritance between structs, and thus reuse
-methods.
+滥用 `Deref` trait，在结构体之间模拟继承，从而复用方法。
 
-## Example
+## 示例
 
-Sometimes we want to emulate the following common pattern from OO languages such
-as Java:
+有时，我们想模拟 Java 等面向对象语言中的常见写法：
 
 ```java
 class Foo {
@@ -23,7 +21,7 @@ public static void main(String[] args) {
 }
 ```
 
-We can use the deref polymorphism anti-pattern to do so:
+可以用 `Deref` 多态这个反模式来实现：
 
 ```rust
 use std::ops::Deref;
@@ -53,22 +51,26 @@ fn main() {
 }
 ```
 
-There is no struct inheritance in Rust. Instead we use composition and include
-an instance of `Foo` in `Bar` (since the field is a value, it is stored inline,
-so if there were fields, they would have the same layout in memory as the Java
-version (probably, you should use `#[repr(C)]` if you want to be sure)).
+Rust 没有结构体继承。我们改用组合，在 `Bar` 内包含一个 `Foo` 实例。
+由于这个字段是一个值，它会内联存储；因此，如果这些结构体包含字段，
+它们的内存布局就会与 Java 版本相同——大概如此，如果想确定这一点，应使用
+`#[repr(C)]`。
 
-In order to make the method call work we implement `Deref` for `Bar` with `Foo`
-as the target (returning the embedded `Foo` field). That means that when we
-dereference a `Bar` (for example, using `*`) then we will get a `Foo`. That is
-pretty weird. Dereferencing usually gives a `T` from a reference to `T`, here we
-have two unrelated types. However, since the dot operator does implicit
-dereferencing, it means that the method call will search for methods on `Foo` as
-well as `Bar`.
+> **译注（原文疑点）**：上段的内存布局类比不成立。字段按值内嵌这一点是正确的，
+> 但默认的 Rust 表示并不保证字段按声明顺序排列，`#[repr(C)]` 规定的也是 面向 C
+> 互操作的数据布局，并不保证与 Java 对象布局相同。不要根据这段类比推导
+> 跨语言内存兼容性。参见
+> [Rust Reference 的类型布局说明](https://doc.rust-lang.org/reference/type-layout.html)。
 
-## Advantages
+为了让方法调用成立，我们为 `Bar` 实现 `Deref`，并将 `Foo` 设为目标类型， 在
+`deref` 中返回对内嵌 `Foo` 字段的引用。这意味着对 `Bar` 解引用时， 例如使用
+`*`，就会得到一个 `Foo`。这很奇怪：解引用通常是从对 `T` 的引用得到 `T`，
+而这里却涉及两个没有这种指针关系的类型。不过，点运算符会执行隐式解引用，
+因此方法查找除了会检查 `Bar`，也会检查 `Foo`。
 
-You save a little boilerplate, e.g.,
+## 优点
+
+可以少写一点样板代码，例如：
 
 ```rust,ignore
 impl Bar {
@@ -78,53 +80,57 @@ impl Bar {
 }
 ```
 
-## Disadvantages
+## 缺点
 
-Most importantly this is a surprising idiom - future programmers reading this in
-code will not expect this to happen. That's because we are misusing the `Deref`
-trait rather than using it as intended (and documented, etc.). It's also because
-the mechanism here is completely implicit.
+最重要的是，这种写法令人意外：后续阅读代码的程序员不会预期它有这样的行为。
+这是因为我们没有按照 `Deref` 的设计意图和文档约定来使用它，而是在滥用它；
+同时，这套机制又是完全隐式的。
 
-This pattern does not introduce subtyping between `Foo` and `Bar` like
-inheritance in Java or C++ does. Furthermore, traits implemented by `Foo` are
-not automatically implemented for `Bar`, so this pattern interacts badly with
-bounds checking and thus generic programming.
+这个模式不会像 Java 或 C++ 的继承那样，在 `Foo` 与 `Bar` 之间建立子类型关系。
+而且，`Foo` 实现的 trait 不会自动由 `Bar` 实现，因此这种模式在类型约束检查，
+进而在泛型编程中，都会带来问题。
 
-Using this pattern gives subtly different semantics from most OO languages with
-regards to `self`. Usually it remains a reference to the sub-class, with this
-pattern it will be the 'class' where the method is defined.
+> **译注（学习提示）**：要区分“方法调用能找到 `Foo::m`”与“`Bar` 满足 `Foo`
+> 所满足的 trait 约束”。前者可以依靠方法查找中的自动解引用完成；后者要求 `Bar`
+> 自己实现相应 trait。因而某段具体类型代码中可用的 `b.m()`， 不代表把 `b`
+> 传给一个有相应泛型约束的函数也会成立。 `Deref` 的隐式行为会成为公开 API
+> 的一部分，参见
+> [标准库关于何时实现 `Deref` 的建议](https://doc.rust-lang.org/std/ops/trait.Deref.html#when-to-implement-deref-or-derefmut)。
 
-Finally, this pattern only supports single inheritance, and has no notion of
-interfaces, class-based privacy, or other inheritance-related features. So, it
-gives an experience that will be subtly surprising to programmers used to Java
-inheritance, etc.
+这种模式对 `self` 的处理，与多数面向对象语言也有细微的语义差别。
+在那些语言中，`self` 通常仍然是对子类的引用；而在这种模式下，
+它指向的是定义该方法的那个“类”。
 
-## Discussion
+最后，这种模式只支持单继承，也没有接口、基于类的私有访问控制，
+以及其他与继承有关的特性。因此，习惯 Java 等语言继承机制的程序员，
+使用它时会遇到一些不易察觉却令人意外的差别。
 
-There is no one good alternative. Depending on the exact circumstances it might
-be better to re-implement using traits or to write out the facade methods to
-dispatch to `Foo` manually. We do intend to add a mechanism for inheritance
-similar to this to Rust, but it is likely to be some time before it reaches
-stable Rust. See these [blog](http://aturon.github.io/blog/2015/09/18/reuse/)
-[posts](http://smallcultfollowing.com/babysteps/blog/2015/10/08/virtual-structs-part-4-extended-enums-and-thin-traits/)
-and this [RFC issue](https://github.com/rust-lang/rfcs/issues/349) for more
-details.
+## 讨论
 
-The `Deref` trait is designed for the implementation of custom pointer types.
-The intention is that it will take a pointer-to-`T` to a `T`, not convert
-between different types. It is a shame that this isn't (probably cannot be)
-enforced by the trait definition.
+不存在一种适用于所有情况的理想替代方案。根据具体场景， 可能更适合用 trait
+重新实现，也可能更适合手工编写门面方法，将调用转发给 `Foo`。 我们确实打算为 Rust
+加入一种与此类似的继承机制，但它进入稳定版 Rust 很可能还需要
+相当长的时间。详情可阅读这两篇[博客](http://aturon.github.io/blog/2015/09/18/reuse/)
+[文章](http://smallcultfollowing.com/babysteps/blog/2015/10/08/virtual-structs-part-4-extended-enums-and-thin-traits/)，
+以及这个 [RFC issue](https://github.com/rust-lang/rfcs/issues/349)。
 
-Rust tries to strike a careful balance between explicit and implicit mechanisms,
-favouring explicit conversions between types. Automatic dereferencing in the dot
-operator is a case where the ergonomics strongly favour an implicit mechanism,
-but the intention is that this is limited to degrees of indirection, not
-conversion between arbitrary types.
+> **译注（版本说明）**：关于“打算加入继承机制”的这句话来自原文， 所引博客发表于
+> 2015 年，应作为当时的探索背景阅读，而不是当前语言路线图的承诺。 Rust
+> 对代码复用和多态提供的机制，可参见
+> [《Rust 程序设计语言》的相关章节](https://doc.rust-lang.org/book/ch18-01-what-is-oo.html)。
 
-## See also
+`Deref` trait 是为实现自定义指针类型而设计的。它的意图是从“指向 `T` 的指针” 得到
+`T`，而不是在不同类型之间做转换。遗憾的是，这种意图没有被 trait 定义强制保证，
+而且很可能也无法强制保证。
 
-- [Collections are smart pointers idiom](../idioms/deref.md).
-- Delegation crates for less boilerplate like
-  [delegate](https://crates.io/crates/delegate) or
-  [ambassador](https://crates.io/crates/ambassador)
-- [Documentation for `Deref` trait](https://doc.rust-lang.org/std/ops/trait.Deref.html).
+Rust 试图在显式机制与隐式机制之间取得谨慎的平衡，倾向于让类型转换显式发生。
+点运算符的自动解引用是一个例外：这里的使用便利性强烈支持采用隐式机制。
+但其设计意图是让隐式处理限于指针的间接层级，而不是任意类型之间的转换。
+
+## 另请参阅
+
+- [集合也是智能指针](../idioms/deref.md)。
+- 可以减少样板代码的委托 crate，例如
+  [delegate](https://crates.io/crates/delegate) 和
+  [ambassador](https://crates.io/crates/ambassador)。
+- [`Deref` trait 文档](https://doc.rust-lang.org/std/ops/trait.Deref.html)。

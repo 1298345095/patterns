@@ -1,8 +1,7 @@
-# Anti-patterns
+# 反模式
 
-An [anti-pattern](https://en.wikipedia.org/wiki/Anti-pattern) is a solution to a
-"recurring problem that is usually ineffective and risks being highly
-counterproductive". Just as valuable as knowing how to solve a problem, is
-knowing how *not* to solve it. Anti-patterns give us great counter-examples to
-consider relative to design patterns. Anti-patterns are not confined to code.
-For example, a process can be an anti-pattern, too.
+[反模式](https://en.wikipedia.org/wiki/Anti-pattern)是针对“反复出现的问题”
+而采用的一种解决方案，但它“通常无效，而且很可能产生严重的负面效果”。
+知道*不该*怎样解决问题，与知道怎样解决问题同样重要。
+相对于设计模式，反模式提供了值得思考的反例。反模式也不限于代码，
+例如，某种流程也可能是一种反模式。

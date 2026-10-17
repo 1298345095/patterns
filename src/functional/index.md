@@ -1,11 +1,6 @@
-# Functional Usage of Rust
+# Rust 的函数式用法
 
-Rust is an imperative language, but it follows many
-[functional programming](https://en.wikipedia.org/wiki/Functional_programming)
-paradigms.
+Rust
+是一门命令式语言，但也遵循许多[函数式编程](https://en.wikipedia.org/wiki/Functional_programming)范式。
 
-> In computer science, *functional programming* is a programming paradigm where
-> programs are constructed by applying and composing functions. It is a
-> declarative programming paradigm in which function definitions are trees of
-> expressions that each return a value, rather than a sequence of imperative
-> statements which change the state of the program.
+> 在计算机科学中，*函数式编程*是一种通过应用和组合函数来构建程序的编程范式。它属于声明式编程范式：函数定义由一棵表达式树构成，其中每个表达式都会返回一个值；而不是由一系列改变程序状态的命令式语句构成。

@@ -1,12 +1,11 @@
-# Collections are smart pointers
+# 集合也是智能指针
 
-## Description
+## 描述
 
-Use the [`Deref`](https://doc.rust-lang.org/std/ops/trait.Deref.html) trait to
-treat collections like smart pointers, offering owning and borrowed views of
-data.
+使用 [`Deref`](https://doc.rust-lang.org/std/ops/trait.Deref.html)
+trait，将集合视为智能指针，为数据提供拥有型视图与借用视图。
 
-## Example
+## 示例
 
 ```rust,ignore
 use std::ops::Deref;
@@ -25,55 +24,59 @@ impl<T> Deref for Vec<T> {
 }
 ```
 
-A `Vec<T>` is an owning collection of `T`s, while a slice (`&[T]`) is a borrowed
-collection of `T`s. Implementing `Deref` for `Vec` allows implicit dereferencing
-from `&Vec<T>` to `&[T]` and includes the relationship in auto-dereferencing
-searches. Most methods you might expect to be implemented for `Vec`s are instead
-implemented for slices.
+`Vec<T>` 是拥有其中各个 `T` 值的集合，而切片（`&[T]`）则是对这些 `T`
+值的借用集合。为 `Vec` 实现 `Deref` 后，就可以隐式地将 `&Vec<T>` 解引用为
+`&[T]`，而且自动解引用查找也会纳入这一关系。许多你可能以为由 `Vec`
+实现的方法，其实是为切片实现的。
 
-Also `String` and `&str` have a similar relation.
+`String` 和 `&str` 之间也有类似的关系。
 
-## Motivation
+## 动机
 
-Ownership and borrowing are key aspects of the Rust language. Data structures
-must account for these semantics properly to give a good user experience. When
-implementing a data structure that owns its data, offering a borrowed view of
-that data allows for more flexible APIs.
+所有权和借用是 Rust
+语言的核心概念。数据结构必须妥善处理这些语义，才能带来良好的使用体验。实现拥有自身数据的数据结构时，为这些数据提供借用视图，可以使
+API 更加灵活。
 
-## Advantages
+## 优点
 
-Most methods can be implemented only for the borrowed view, they are then
-implicitly available for the owning view.
+大多数方法只需要为借用视图实现，拥有型视图就能隐式地使用它们。
 
-Gives clients a choice between borrowing or taking ownership of data.
+调用者可以自行选择借用数据，还是取得数据的所有权。
 
-## Disadvantages
+> **译注（学习提示）**：这里“视图”的边界也是能力的边界。`&[T]`
+> 暴露连续元素，却不暴露 `Vec<T>`
+> 的容量管理；因此切片上的算法可以复用于向量、数组的一部分以及其他连续存储。为自定义类型实现
+> `Deref` 也会把目标类型的方法纳入隐式查找，这是一项公开 API
+> 承诺，需要考虑以后双方出现同名方法时的影响。参见
+> [`Deref` 的实现建议](https://doc.rust-lang.org/std/ops/trait.Deref.html#when-to-implement-deref-or-derefmut)。
 
-Methods and traits only available via dereferencing are not taken into account
-when bounds checking, so generic programming with data structures using this
-pattern can get complex (see the `Borrow` and `AsRef` traits, etc.).
+## 缺点
 
-## Discussion
+只有通过解引用才能使用的方法和
+trait，不会在约束检查中被考虑。因此，对采用这种模式的数据结构进行泛型编程时，情况可能变得复杂，参见
+`Borrow`、`AsRef` 等 trait。
 
-Smart pointers and collections are analogous: a smart pointer points to a single
-object, whereas a collection points to many objects. From the point of view of
-the type system, there is little difference between the two. A collection owns
-its data if the only way to access each datum is via the collection and the
-collection is responsible for deleting the data (even in cases of shared
-ownership, some kind of borrowed view may be appropriate). If a collection owns
-its data, it is usually useful to provide a view of the data as borrowed so that
-it can be referenced multiple times.
+> **译注（学习提示）**：原文的 “bounds checking” 在这里指泛型的 trait
+> 约束检查，不是索引越界检查。`Wrapper: Deref<Target = T>` 并不意味着 `Wrapper`
+> 自动实现 `T` 所实现的其他 trait；“能够通过方法调用语法访问某方法”与“满足
+> `U: SomeTrait`”是两件事。泛型接口可以要求适当的 `AsRef`／`Borrow`
+> 实现，或由调用者显式取得目标引用。参见
+> [强制转换的发生位置](https://doc.rust-lang.org/reference/type-coercions.html#coercion-sites)。
 
-Most smart pointers (e.g., `Foo<T>`) implement `Deref<Target=T>`. However,
-collections will usually dereference to a custom type. `[T]` and `str` have some
-language support, but in the general case, this is not necessary. `Foo<T>` can
-implement `Deref<Target=Bar<T>>` where `Bar` is a dynamically sized type and
-`&Bar<T>` is a borrowed view of the data in `Foo<T>`.
+## 讨论
 
-Commonly, ordered collections will implement `Index` for `Range`s to provide
-slicing syntax. The target will be the borrowed view.
+智能指针和集合有相似之处：智能指针指向一个对象，集合则指向多个对象。从类型系统的角度看，两者没有太大区别。如果只能通过集合访问其中的各个数据项，并且集合负责销毁这些数据，那么这个集合就拥有这些数据。即使存在共享所有权，某种形式的借用视图仍可能是合适的。如果集合拥有自己的数据，为这些数据提供借用视图通常很有用，这样就可以多次引用它们。
 
-## See also
+大多数智能指针，例如 `Foo<T>`，都会实现
+`Deref<Target=T>`。不过，集合通常会解引用为某种自定义类型。`[T]` 和 `str`
+获得了一些语言层面的支持，但一般情况下并不需要这样的支持。`Foo<T>` 可以实现
+`Deref<Target=Bar<T>>`，其中 `Bar` 是一个动态大小类型，而 `&Bar<T>` 是 `Foo<T>`
+内部数据的借用视图。
 
-- [Deref polymorphism anti-pattern](../anti_patterns/deref.md).
-- [Documentation for `Deref` trait](https://doc.rust-lang.org/std/ops/trait.Deref.html).
+通常，有序集合会以 `Range` 类型为索引实现
+`Index`，以提供切片语法；其目标将是借用视图。
+
+## 另请参阅
+
+- [解引用多态反模式](../anti_patterns/deref.md)。
+- [`Deref` trait 文档](https://doc.rust-lang.org/std/ops/trait.Deref.html)。

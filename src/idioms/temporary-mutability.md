@@ -1,19 +1,16 @@
-# Temporary mutability
+# 临时可变性
 
-## Description
+## 描述
 
-Often it is necessary to prepare and process some data, but after that data are
-only inspected and never modified. The intention can be made explicit by
-redefining the mutable variable as immutable.
+我们经常需要先准备和处理一些数据，之后就只查看而不再修改。把可变变量重新定义为不可变变量，可以明确表达这种意图。
 
-It can be done either by processing data within a nested block or by redefining
-the variable.
+可以在嵌套代码块中处理数据，也可以通过重新定义变量来实现。
 
-## Example
+## 示例
 
-Say, vector must be sorted before usage.
+假设一个向量必须先排序，才能使用。
 
-Using nested block:
+使用嵌套代码块：
 
 ```rust,ignore
 let data = {
@@ -22,24 +19,32 @@ let data = {
     data
 };
 
-// Here `data` is immutable.
+// 此处的 `data` 是不可变的。
 ```
 
-Using variable rebinding:
+使用变量重新绑定：
 
 ```rust,ignore
 let mut data = get_vec();
 data.sort();
 let data = data;
 
-// Here `data` is immutable.
+// 此处的 `data` 是不可变的。
 ```
 
-## Advantages
+> **译注（学习提示）**：`let data = data;`
+> 创建了一个遮蔽旧名称的新绑定，并把向量的所有权移入其中，不会为了去掉 `mut`
+> 克隆全部元素。变化的是当前绑定允许的操作，而不是向量的类型；后续仍可显式移入新的可变绑定。因此，它适合表达局部处理阶段已经结束，但并不能把“已排序且永不再改动”编码成一个不可绕过的类型级不变量。
 
-Compiler ensures that you don't accidentally mutate data after some point.
+## 优点
 
-## Disadvantages
+编译器会确保你不会在某个阶段之后意外修改数据。
 
-Nested block requires additional indentation of block body. One more line to
-return data from block or redefine variable.
+> **译注（原文疑点）**：这里的保证针对通过该不可变绑定进行的普通修改，并不等于数据被彻底冻结。如果数据包含
+> `Cell`、`RefCell`
+> 等提供内部可变性的类型，仍可能通过共享引用改变其内部状态。理解这个模式时，需要区分“绑定不可变”与“对象图中任何状态都不会再改变”。参见
+> [标准库对内部可变性的说明](https://doc.rust-lang.org/std/cell/index.html)。
+
+## 缺点
+
+嵌套代码块需要额外缩进块内代码，还需要多写一行来返回数据，或重新定义变量。

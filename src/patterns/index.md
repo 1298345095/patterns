@@ -1,30 +1,28 @@
-# Design Patterns
+# 设计模式
 
-[Design patterns](https://en.wikipedia.org/wiki/Software_design_pattern) are
-"general reusable solutions to a commonly occurring problem within a given
-context in software design". Design patterns are a great way to describe the
-culture of a programming language. Design patterns are very language-specific -
-what is a pattern in one language may be unnecessary in another due to a
-language feature, or impossible to express due to a missing feature.
+[设计模式](https://en.wikipedia.org/wiki/Software_design_pattern)是“在软件设计的特定情境中，
+针对反复出现的问题提出的、通用且可复用的解决方案”。设计模式是描述一门编程语言文化的好方法。
+设计模式与具体语言密切相关：在一种语言中需要用模式解决的问题，在另一种语言中可能已有语言特性支持，
+因而不再需要这种模式；也可能因为缺少某种特性，根本无法表达该模式。
 
-If overused, design patterns can add unnecessary complexity to programs.
-However, they are a great way to share intermediate and advanced level knowledge
-about a programming language.
+过度使用设计模式会给程序增加不必要的复杂度。不过，设计模式也是分享一门编程语言的中高级知识的好方式。
 
-## Design patterns in Rust
+## Rust 中的设计模式
 
-Rust has many unique features. These features give us great benefit by removing
-whole classes of problems. Some of them are also patterns that are *unique* to
-Rust.
+Rust
+有许多独特的特性。这些特性能够消除整类问题，带来很大好处。其中一些特性也形成了
+Rust *独有*的模式。
 
 ## YAGNI
 
-YAGNI is an acronym that stands for `You Aren't Going to Need It`. It's a vital
-software design principle to apply as you write code.
+YAGNI 是 `You Aren't Going to Need It`
+的缩写，意为“你不会需要它”。这是编写代码时应当遵循的一条重要的软件设计原则。
 
-> The best code I ever wrote was code I never wrote.
+> 我写过的最好的代码，就是那些我从未写下的代码。
 
-If we apply YAGNI to design patterns, we see that the features of Rust allow us
-to throw out many patterns. For instance, there is no need for the
-[strategy pattern](https://en.wikipedia.org/wiki/Strategy_pattern) in Rust
-because we can just use [traits](https://doc.rust-lang.org/book/traits.html).
+把 YAGNI 应用到设计模式上，就会发现 Rust 的语言特性让我们可以舍弃许多模式。
+例如，Rust 中不需要[策略模式](https://en.wikipedia.org/wiki/Strategy_pattern)，
+因为我们直接使用 [trait](https://doc.rust-lang.org/book/traits.html) 就可以了。
+
+> **译注（原文疑点）**：这里“不需要策略模式”说得较为绝对。更合适的理解是：trait
+> 等语言机制能够直接表达“把可替换的行为传入算法”这一设计意图，因此通常不必照搬其他语言的类层次与样板代码。本书后面的[策略模式](behavioural/strategy.md)一章正是在展示这一点；语言特性简化了模式的实现，并没有消除这个设计问题本身。

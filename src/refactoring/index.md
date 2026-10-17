@@ -1,23 +1,29 @@
-# Refactoring
+# 重构
 
-Refactoring is very important in relation to these topics. Just as important as
-the other topics covered here, is how to take good code and turn it into great
-code.
+重构与本书讨论的这些主题密切相关，也十分重要。
+如何把好的代码改进为出色的代码，与这里介绍的其他主题同样值得关注。
 
-We can use [design patterns](../patterns/index.md) to [DRY] up code and
-generalize abstractions. We must avoid
-[anti-patterns](../anti_patterns/index.md) while we do this. While they may be
-tempting to employ, their costs outweigh their benefits.
+我们可以借助[设计模式](../patterns/index.md)让代码遵循 [DRY 原则][DRY]，
+消除重复，并提炼出更通用的抽象。在这个过程中，必须避免
+[反模式](../anti_patterns/index.md)。尽管它们有时很有吸引力，
+但付出的代价往往超过带来的收益。
 
-> Shortcuts make for long days.
+> 图一时的捷径，往往换来日后的漫长折腾。
 
-We can also use [idioms](../idioms/index.md) to structure our code in a way that
-is understandable.
+我们还可以使用[惯用法](../idioms/index.md)，把代码组织成容易理解的形式。
 
-## Tests
+## 测试
 
-Tests are of vital importance during refactoring.
+测试在重构过程中至关重要。
 
-## Small changes
+## 小步修改
+
+> **译注（原文疑点）**：原仓库中的本页未列入目录，而且“小步修改”一节只有标题，
+> 没有正文。本译本保留这一未完成状态，并补上目录入口，避免遗漏这份原有内容。
+>
+> **译注（学习提示）**：学习时可以把一次重构的目标写成可检查的命题： 例如“把
+> `&mut self` 拆成互不重叠的字段借用，同时保留成功结果和错误行为”。
+> 编译通过能帮助确认类型与借用约束，行为是否等价则仍需借助测试或推理。
+> 这样能把“结构发生变化”和“需求发生变化”区分开，出问题时也更容易定位原因。
 
 [DRY]: https://en.wikipedia.org/wiki/Don%27t_repeat_yourself

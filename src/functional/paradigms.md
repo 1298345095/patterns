@@ -1,11 +1,9 @@
-# Programming paradigms
+# 编程范式
 
-One of the biggest hurdles to understanding functional programs when coming from
-an imperative background is the shift in thinking. Imperative programs describe
-**how** to do something, whereas declarative programs describe **what** to do.
-Let's sum the numbers from 1 to 10 to show this.
+对于习惯命令式编程的人来说，理解函数式程序的一大障碍就是思维方式的转变。命令式程序描述**怎样做**一件事，而声明式程序描述**要做什么**。下面通过计算
+1 到 10 的总和来说明这一点。
 
-## Imperative
+## 命令式
 
 ```rust
 let mut sum = 0;
@@ -15,10 +13,9 @@ for i in 1..11 {
 println!("{sum}");
 ```
 
-With imperative programs, we have to play compiler to see what is happening.
-Here, we start with a `sum` of `0`. Next, we iterate through the range from 1
-to 10. Each time through the loop, we add the corresponding value in the range.
-Then we print it out.
+阅读命令式程序时，我们得在脑中扮演编译器，逐步推演发生了什么。这里先把 `sum`
+设为 `0`，然后遍历从 1 到 10
+的范围。每次循环都把范围中对应的值加到总和上，最后打印结果。
 
 | `i` | `sum` |
 | :-: | :---: |
@@ -33,36 +30,42 @@ Then we print it out.
 |  9  |  45   |
 | 10  |  55   |
 
-This is how most of us start out programming. We learn that a program is a set
-of steps.
+我们大多数人都是这样开始学习编程的：程序就是一系列步骤。
 
-## Declarative
+## 声明式
 
 ```rust
 println!("{}", (1..11).fold(0, |a, b| a + b));
 ```
 
-Whoa! This is really different! What's going on here? Remember that with
-declarative programs we are describing **what** to do, rather than **how** to do
-it. `fold` is a function that
-[composes](https://en.wikipedia.org/wiki/Function_composition) functions. The
-name is a convention from Haskell.
+哇，这看起来完全不同！这里到底发生了什么？记住，声明式程序描述的是**要做什么**，而不是**怎样做**。`fold`
+是一个用于[组合](https://en.wikipedia.org/wiki/Function_composition)函数的函数，这个名字沿用了
+Haskell 的惯例。
 
-Here, we are composing functions of addition (this closure: `|a, b| a + b`) with
-a range from 1 to 10. The `0` is the starting point, so `a` is `0` at first. `b`
-is the first element of the range, `1`. `0 + 1 = 1` is the result. So now we
-`fold` again, with `a = 1`, `b = 2` and so `1 + 2 = 3` is the next result. This
-process continues until we get to the last element in the range, `10`.
+> **译注（原文疑点）**：严格来说，`fold`
+> 是折叠或归约操作，不是通常数学意义上的函数复合
+> `f(g(x))`。它依次取出元素，把“已有累积值”和“当前元素”交给同一个闭包，再把闭包结果作为下一步的累积值。原文借“组合”强调计算逻辑可以通过函数表达；理解
+> API 时则应区分这两个概念。参见
+> [`Iterator::fold`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.fold)。
 
-| `a` | `b` | result |
-| :-: | :-: | :----: |
-|  0  |  1  |   1    |
-|  1  |  2  |   3    |
-|  3  |  3  |   6    |
-|  6  |  4  |   10   |
-| 10  |  5  |   15   |
-| 15  |  6  |   21   |
-| 21  |  7  |   28   |
-| 28  |  8  |   36   |
-| 36  |  9  |   45   |
-| 45  | 10  |   55   |
+这里把加法函数，也就是闭包 `|a, b| a + b`，与从 1 到 10 的范围组合起来。`0`
+是起点，因此最开始 `a` 为 `0`，`b` 是范围中的第一个元素 `1`，得到结果
+`0 + 1 = 1`。然后再次进行 `fold`：此时 `a = 1`、`b = 2`，下一个结果就是
+`1 + 2 = 3`。这个过程会一直持续到范围中的最后一个元素 `10`。
+
+| `a` | `b` | 结果 |
+| :-: | :-: | :--: |
+|  0  |  1  |  1   |
+|  1  |  2  |  3   |
+|  3  |  3  |  6   |
+|  6  |  4  |  10  |
+| 10  |  5  |  15  |
+| 15  |  6  |  21  |
+| 21  |  7  |  28  |
+| 28  |  8  |  36  |
+| 36  |  9  |  45  |
+| 45  | 10  |  55  |
+
+> **译注（学习提示）**：`fold`
+> 消费迭代器，并把累积值的所有权逐步传给闭包；累积值的类型不必与元素相同，因此也可以把记录折叠为映射表或统计结构。它接受
+> `FnMut`，所以使用这种写法并不自动让计算成为纯函数，也不表示可以任意重排运算。左折叠有确定的顺序；若以后改为并行归约，就需要重新检查结合律、浮点舍入和副作用等条件。

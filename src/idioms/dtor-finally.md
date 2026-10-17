@@ -1,95 +1,100 @@
-# Finalisation in destructors
+# 在析构函数中执行收尾工作
 
-## Description
+## 描述
 
-Rust does not provide the equivalent to `finally` blocks - code that will be
-executed no matter how a function is exited. Instead, an object's destructor can
-be used to run code that must be run before exit.
+Rust 没有与 `finally`
+块等价的机制，也就是无论函数以何种方式退出都执行的代码块。不过，可以利用对象的析构函数，执行退出前必须执行的代码。
 
-## Example
+## 示例
 
 ```rust,ignore
 fn baz() -> Result<(), ()> {
-    // some code
+    // 一些代码
 }
 
 fn bar() -> Result<(), ()> {
-    // These don't need to be defined inside the function.
+    // 这些定义不必放在函数内部。
     struct Foo;
 
-    // Implement a destructor for Foo.
+    // 为 Foo 实现析构函数。
     impl Drop for Foo {
         fn drop(&mut self) {
             println!("exit");
         }
     }
 
-    // The destructor of _exit will run however the function `bar` is exited.
+    // 无论函数 `bar` 如何退出，_exit 的析构函数都会执行。
     let _exit = Foo;
-    // Implicit return with `?` operator.
+    // 通过 `?` 运算符隐式返回。
     baz()?;
-    // Normal return.
+    // 正常返回。
     Ok(())
 }
 ```
 
-## Motivation
+## 动机
 
-If a function has multiple return points, then executing code on exit becomes
-difficult and repetitive (and thus bug-prone). This is especially the case where
-return is implicit due to a macro. A common case is the `?` operator which
-returns if the result is an `Err`, but continues if it is `Ok`. `?` is used as
-an exception handling mechanism, but unlike Java (which has `finally`), there is
-no way to schedule code to run in both the normal and exceptional cases.
-Panicking will also exit a function early.
+如果一个函数有多个返回点，要在退出时执行同一段代码就会变得麻烦且重复，从而容易引入错误。由宏隐式引发返回时，这个问题尤其突出。一个常见情况是
+`?` 运算符：结果为 `Err` 时返回，为 `Ok` 时继续执行。`?`
+被用作一种异常处理机制，但与拥有 `finally` 的 Java
+不同，没有一种方式可以安排一段代码，让它在正常情况和异常情况下都执行。panic
+也会使函数提前退出。
 
-## Advantages
+## 优点
 
-Code in destructors will (nearly) always be run - copes with panics, early
-returns, etc.
+析构函数中的代码几乎总会执行，能够应对 panic、提前返回等情况。
 
-## Disadvantages
+## 缺点
 
-It is not guaranteed that destructors will run. For example, if there is an
-infinite loop in a function or if running a function crashes before exit.
-Destructors are also not run in the case of a panic in an already panicking
-thread. Therefore, destructors cannot be relied on as finalizers where it is
-absolutely essential that finalisation happens.
+析构函数并不保证一定执行。例如，函数内部出现无限循环，或函数在退出前崩溃时，就可能无法执行析构函数。一个已经发生
+panic 的线程再次发生 panic
+时，析构函数也不会继续执行。因此，如果收尾工作绝对不能遗漏，就不能依赖析构函数来完成。
 
-This pattern introduces some hard to notice, implicit code. Reading a function
-gives no clear indication of destructors to be run on exit. This can make
-debugging tricky.
+> **译注（学习提示）**：panic
+> 时是否执行析构，取决于是否进行栈展开（unwinding）。采用 `panic = "abort"`
+> 时会直接终止进程；显式调用 `std::process::exit`
+> 也不会按正常离开作用域的方式析构栈上对象。因此，`Drop`
+> 适合把资源释放与作用域绑定，但不能单独承诺诸如“无论进程如何结束，记录都一定持久化”这样的外部效果。参见
+> [`Drop` 与 panic](https://doc.rust-lang.org/std/ops/trait.Drop.html#panics) 和
+> [`process::exit`](https://doc.rust-lang.org/std/process/fn.exit.html)。
 
-Requiring an object and `Drop` impl just for finalisation is heavy on
-boilerplate.
+这种模式会引入一些难以察觉的隐式代码。阅读函数时，并没有明确的标记告诉你退出时会执行哪些析构函数，这可能增加调试难度。
 
-## Discussion
+仅仅为了完成收尾工作，就要引入一个对象并为它实现 `Drop`，样板代码会比较多。
 
-There is some subtlety about how exactly to store the object used as a
-finalizer. It must be kept alive until the end of the function and must then be
-destroyed. The object must always be a value or uniquely owned pointer (e.g.,
-`Box<Foo>`). If a shared pointer (such as `Rc`) is used, then the finalizer can
-be kept alive beyond the lifetime of the function. For similar reasons, the
-finalizer should not be moved or returned.
+## 讨论
 
-The finalizer must be assigned into a variable, otherwise it will be destroyed
-immediately, rather than when it goes out of scope. The variable name must start
-with `_` if the variable is only used as a finalizer, otherwise the compiler
-will warn that the finalizer is never used. However, do not call the variable
-`_` with no suffix - in that case it will be destroyed immediately.
+如何保存用作收尾器的对象，有一些微妙之处。这个对象必须一直存活到函数结束，然后被销毁。它必须是一个值，或者由独占所有权的指针持有，例如
+`Box<Foo>`。如果使用 `Rc`
+这样的共享指针，收尾器就可能活得比函数更久。出于类似原因，也不应把收尾器移走或返回给调用者。
 
-In Rust, destructors are run when an object goes out of scope. This happens
-whether we reach the end of block, there is an early return, or the program
-panics. When panicking, Rust unwinds the stack running destructors for each
-object in each stack frame. So, destructors get called even if the panic happens
-in a function being called.
+必须把收尾器赋给一个变量，否则它会立即被销毁，而不是等到离开作用域时才销毁。如果变量只用于收尾，变量名必须以
+`_` 开头，否则编译器会警告这个变量从未使用。不过，不要只用单独的 `_`
+作为变量名；这样仍然会立即销毁对象。
 
-If a destructor panics while unwinding, there is no good action to take, so Rust
-aborts the thread immediately, without running further destructors. This means
-that destructors are not absolutely guaranteed to run. It also means that you
-must take extra care in your destructors not to panic, since it could leave
-resources in an unexpected state.
+> **译注（原文疑点）**：单独的 `_`
+> 是不建立绑定的通配模式，不是普通变量名。对本例的 `let _ = Foo;`
+> 而言，新建的临时对象会在该语句结束时销毁；但不能推广为所有
+> `let _ = existing_value;`
+> 都会立即销毁已有值，因为这种模式通常不会把已有值移走。要把新建的守卫保留到作用域结束，应使用
+> `_guard` 这样的真正绑定。参见
+> [通配模式](https://doc.rust-lang.org/reference/patterns.html#wildcard-pattern)。
 
-## See also
+在 Rust
+中，对象离开作用域时会运行析构函数。无论是走到代码块末尾、提前返回，还是程序发生
+panic，都会如此。发生 panic 时，Rust
+会展开栈，并为每个栈帧中的每个对象运行析构函数。因此，即使 panic
+发生在被调用的函数中，析构函数也仍会被调用。
 
-[RAII guards](../patterns/behavioural/RAII.md).
+如果某个析构函数在栈展开过程中发生 panic，就没有合适的后续处理方式，因此 Rust
+会立即终止该线程，不再运行后续析构函数。这意味着析构函数并不绝对保证执行，也意味着编写析构函数时必须格外小心，避免其中发生
+panic，否则资源可能处于意料之外的状态。
+
+> **译注（原文疑点）**：这里的“终止该线程”不准确。栈展开过程中析构函数再次发生
+> panic，通常会导致**整个进程中止**，而不只是结束当前线程。上段关于 panic
+> 时运行析构函数的描述，也以启用栈展开为前提。参见标准库
+> [`Drop` 的 panic 说明](https://doc.rust-lang.org/std/ops/trait.Drop.html#panics)。
+
+## 另请参阅
+
+[RAII 守卫](../patterns/behavioural/RAII.md)。

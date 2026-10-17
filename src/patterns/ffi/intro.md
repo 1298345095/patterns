@@ -1,13 +1,12 @@
-# FFI Patterns
+# FFI 模式
 
-Writing FFI code is an entire course in itself. However, there are several
-idioms here that can act as pointers, and avoid traps for inexperienced users of
-unsafe Rust.
+编写 FFI
+代码本身就足以构成一门完整的课程。不过，这里的一些惯用法可以提供指引，帮助尚不熟悉
+unsafe Rust 的使用者避开陷阱。
 
-This section contains design patterns that may be useful when doing FFI.
+本节介绍一些在进行 FFI 开发时可能有用的设计模式。
 
-1. [Object-Based API](./export.md) design that has good memory safety
-   characteristics, and a clean boundary of what is safe and what is unsafe
+1. [基于对象的 API](./export.md)：具有良好的内存安全特性，并能清晰划分安全操作与不安全操作的边界。
 
-2. [Type Consolidation into Wrappers](./wrappers.md) - group multiple Rust types
-   together into an opaque "object"
+2. [将类型整合到包装器中](./wrappers.md)：把多个 Rust
+   类型组合成一个不透明的“对象”。

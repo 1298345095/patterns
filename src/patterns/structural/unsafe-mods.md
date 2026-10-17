@@ -1,35 +1,48 @@
-# Contain unsafety in small modules
+# 将 `unsafe` 代码限制在小模块中
 
-## Description
+## 描述
 
-If you have `unsafe` code, create the smallest possible module that can uphold
-the needed invariants to build a minimal safe interface upon the unsafety. Embed
-this into a larger module that contains only safe code and presents an ergonomic
-interface. Note that the outer module can contain unsafe functions and methods
-that call directly into the unsafe code. Users may use this to gain speed
-benefits.
+如果必须编写 `unsafe` 代码，就创建一个尽可能小的模块，让它负责维护必要的不变量，
+并在不安全操作之上建立一个最小化的安全接口。再把它嵌入一个更大的模块，
+由外层模块只使用安全代码，提供易于使用的接口。
+注意，外层模块也可以包含直接调用底层不安全代码的 `unsafe` 函数和方法，
+使用者可以利用它们获得速度上的收益。
 
-## Advantages
+> **译注（学习提示）**：可以把这些额外的 `unsafe`
+> 接口理解为显式开放的旁路：安全接口应自行保证必要条件，而 `unsafe fn`
+> 必须明确写出需要调用者承担的额外条件。`unsafe`
+> 关键字本身不会使代码更快；只有省去某些检查或采用特定实现时才可能带来收益。参见
+> [Rust Reference 对 `unsafe fn` 与 `unsafe` 块的职责区分](https://doc.rust-lang.org/reference/unsafe-keyword.html)。
 
-- This restricts the unsafe code that must be audited
-- Writing the outer module is much easier, since you can count on the guarantees
-  of the inner module
+## 优点
 
-## Disadvantages
+- 缩小需要审计的不安全代码范围。
+- 编写外层模块更容易，因为可以依赖内层模块提供的保证。
 
-- Sometimes, it may be hard to find a suitable interface.
-- The abstraction may introduce inefficiencies.
+> **译注（学习提示）**：审计边界不能只按 `unsafe { ... }`
+> 的行数计算。凡是能够修改底层表示、从而破坏相关不变量的安全代码，也属于这份安全论证的一部分。小模块的价值在于借助隐私边界，把这些修改入口集中起来：每个构造函数建立不变量，每个公开操作维持不变量，外层安全代码就可以依靠这个契约组合功能。
 
-## Examples
+## 缺点
 
-- The [`toolshed`](https://docs.rs/toolshed) crate contains its unsafe
-  operations in submodules, presenting a safe interface to users.
-- `std`'s `String` class is a wrapper over `Vec<u8>` with the added invariant
-  that the contents must be valid UTF-8. The operations on `String` ensure this
-  behavior. However, users have the option of using an `unsafe` method to create
-  a `String`, in which case the onus is on them to guarantee the validity of the
-  contents.
+- 有时很难找到合适的接口。
+- 抽象可能引入额外开销。
 
-## See also
+## 示例
 
-- [Ralf Jung's Blog about invariants in unsafe code](https://www.ralfj.de/blog/2018/08/22/two-kinds-of-invariants.html)
+- [`toolshed`](https://docs.rs/toolshed) crate
+  将不安全操作限制在子模块中，向使用者提供安全接口。
+- `std` 的 `String` 类是在 `Vec<u8>`
+  之上的包装，并附加了一条不变量：内容必须是合法的 UTF-8。 `String`
+  上的操作会维护这一条件。不过，使用者也可以选择通过一个 `unsafe` 方法创建
+  `String`， 这时，保证内容合法的责任就由使用者承担。
+
+> **译注（原文疑点）**：原文这里沿用了“类”的称呼，`String` 在 Rust
+> 中实际是结构体类型。这个例子的核心在于：如
+> [`String::from_utf8_unchecked`](https://doc.rust-lang.org/std/string/struct.String.html#method.from_utf8_unchecked)
+> 这样的接口跳过了 UTF-8
+> 检查，因此调用者必须提供合法字节；这并不只是显示效果的问题，后续安全操作会依赖
+> UTF-8 不变量来保证内存安全。
+
+## 另请参阅
+
+- [Ralf Jung 关于不安全代码中不变量的博客文章](https://www.ralfj.de/blog/2018/08/22/two-kinds-of-invariants.html)

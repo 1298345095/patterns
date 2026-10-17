@@ -1,15 +1,14 @@
-# Constructors
+# 构造函数
 
-## Description
+## 描述
 
-Rust does not have constructors as a language construct. Instead, the convention
-is to use an [associated function][associated function] `new` to create an
-object:
+Rust 没有将构造函数作为一种语言结构提供。通常的约定是通过名为 `new`
+的[关联函数][associated function]创建对象：
 
 ````rust
-/// Time in seconds.
+/// 以秒为单位的时间。
 ///
-/// # Example
+/// # 示例
 ///
 /// ```
 /// let s = Second::new(42);
@@ -20,27 +19,33 @@ pub struct Second {
 }
 
 impl Second {
-    // Constructs a new instance of [`Second`].
-    // Note this is an associated function - no self.
+    // 构造一个新的 [`Second`] 实例。
+    // 注意，这是一个关联函数，没有 self 参数。
     pub fn new(value: u64) -> Self {
         Self { value }
     }
 
-    /// Returns the value in seconds.
+    /// 返回以秒为单位的值。
     pub fn value(&self) -> u64 {
         self.value
     }
 }
 ````
 
-## Default Constructors
+> **译注（学习提示）**：`new` 的价值不仅在于缩短初始化语法。例子将 `value`
+> 设为私有字段，把外部代码构造 `Second`
+> 的入口集中到关联函数中；若以后需要检查范围，就能在这个入口维护类型的不变量。`new`
+> 本身没有特殊的语言保证，能否绕过它取决于字段可见性以及其他构造入口的设计。参见
+> [Rust 的可见性规则](https://doc.rust-lang.org/reference/visibility-and-privacy.html)。
 
-Rust supports default constructors with the [`Default`][std-default] trait:
+## 默认构造函数
+
+Rust 通过 [`Default`][std-default] trait 支持默认构造函数：
 
 ````rust
-/// Time in seconds.
+/// 以秒为单位的时间。
 ///
-/// # Example
+/// # 示例
 ///
 /// ```
 /// let s = Second::default();
@@ -51,7 +56,7 @@ pub struct Second {
 }
 
 impl Second {
-    /// Returns the value in seconds.
+    /// 返回以秒为单位的值。
     pub fn value(&self) -> u64 {
         self.value
     }
@@ -64,13 +69,13 @@ impl Default for Second {
 }
 ````
 
-`Default` can also be derived if all types of all fields implement `Default`,
-like they do with `Second`:
+如果所有字段的类型都实现了 `Default`，也可以直接派生 `Default`，就像 `Second`
+这样：
 
 ````rust
-/// Time in seconds.
+/// 以秒为单位的时间。
 ///
-/// # Example
+/// # 示例
 ///
 /// ```
 /// let s = Second::default();
@@ -82,32 +87,35 @@ pub struct Second {
 }
 
 impl Second {
-    /// Returns the value in seconds.
+    /// 返回以秒为单位的值。
     pub fn value(&self) -> u64 {
         self.value
     }
 }
 ````
 
-**Note:** It is common and expected for types to implement both `Default` and an
-empty `new` constructor. `new` is the constructor convention in Rust, and users
-expect it to exist, so if it is reasonable for the basic constructor to take no
-arguments, then it should, even if it is functionally identical to default.
+**注意：** 同时为类型实现 `Default` 和无参的 `new`
+构造函数，是一种常见且符合使用者预期的做法。`new` 是 Rust
+中约定俗成的构造函数名称，使用者会期待它的存在。因此，如果基础构造函数不接收参数是合理的，就应当提供这样的构造函数，即使它在功能上与
+`default` 完全一致。
 
-**Hint:** The advantage of implementing or deriving `Default` is that your type
-can now be used where a `Default` implementation is required, most prominently,
-any of the [`*or_default` functions in the standard library][std-or-default].
+**提示：** 实现或派生 `Default` 后，你的类型便可以用于要求 `Default`
+实现的场景，其中最典型的就是[标准库中的各种 `*or_default` 函数][std-or-default]。
 
-## See also
+> **译注（学习提示）**：只有在确实存在合理的无参默认值时，才适合提供这种双入口。若同时提供
+> `new()` 和
+> `Default::default()`，让一个调用另一个可以避免两套默认值逐渐偏离；若构造必须依赖调用者提供的信息，就不必为了形式统一硬造一个默认状态。`Default`
+> 的契约是提供有用的默认值，并不等同于把内存清零。参见
+> [`Default` 文档][std-default]。
 
-- The [default idiom](default.md) for a more in-depth description of the
-  `Default` trait.
+## 另请参阅
 
-- The [builder pattern](../patterns/creational/builder.md) for constructing
-  objects where there are multiple configurations.
+- [默认值惯用法](default.md)更深入地介绍了 `Default` trait。
 
-- [API Guidelines/C-COMMON-TRAITS][API Guidelines/C-COMMON-TRAITS] for
-  implementing both, `Default` and `new`.
+- [构建器模式](../patterns/creational/builder.md)适用于构造具有多种配置的对象。
+
+- [API 指南中的 C-COMMON-TRAITS 条目][API Guidelines/C-COMMON-TRAITS]讨论了同时实现
+  `Default` 和 `new` 的做法。
 
 [associated function]: https://doc.rust-lang.org/stable/book/ch05-03-method-syntax.html#associated-functions
 [std-default]: https://doc.rust-lang.org/stable/std/default/trait.Default.html

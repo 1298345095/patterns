@@ -1,16 +1,16 @@
-# Additional resources
+# 补充资源
 
-A collection of complementary helpful content
+这里收集了一些有助于进一步学习的补充资料。
 
-## Talks
+## 演讲
 
-- [Design Patterns in Rust](https://www.youtube.com/watch?v=Pm_oO0N5B9k) by
-  Nicholas Cameron at the PDRust (2016)
-- [Writing Idiomatic Libraries in Rust](https://www.youtube.com/watch?v=0zOg8_B71gE)
-  by Pascal Hertleif at RustFest (2017)
-- [Rust Programming Techniques](https://www.youtube.com/watch?v=vqavdUGKeb4) by
-  Nicholas Cameron at LinuxConfAu (2018)
+- [Rust 中的设计模式](https://www.youtube.com/watch?v=Pm_oO0N5B9k)： Nicholas
+  Cameron，PDRust，2016 年。
+- [编写符合 Rust 惯用法的库](https://www.youtube.com/watch?v=0zOg8_B71gE)：
+  Pascal Hertleif，RustFest，2017 年。
+- [Rust 编程技巧](https://www.youtube.com/watch?v=vqavdUGKeb4)： Nicholas
+  Cameron，LinuxConfAu，2018 年。
 
-## Books (Online)
+## 在线书籍
 
-- [The Rust API Guidelines](https://rust-lang.github.io/api-guidelines)
+- [Rust API 设计指南](https://rust-lang.github.io/api-guidelines)

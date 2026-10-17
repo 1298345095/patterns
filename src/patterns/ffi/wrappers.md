@@ -1,41 +1,35 @@
-# Type Consolidation into Wrappers
+# 将类型整合到包装器中
 
-## Description
+## 描述
 
-This pattern is designed to allow gracefully handling multiple related types,
-while minimizing the surface area for memory unsafety.
+这个模式旨在妥善处理多个相互关联的类型，同时尽可能缩小可能出现内存不安全问题的范围。
 
-One of the cornerstones of Rust's aliasing rules is lifetimes. This ensures that
-many patterns of access between types can be memory safe, data race safety
-included.
+生命周期是 Rust
+别名规则的基石之一。它确保了类型之间的许多访问模式能够满足内存安全要求，也包括防止数据竞争。
 
-However, when Rust types are exported to other languages, they are usually
-transformed into pointers. In Rust, a pointer means "the user manages the
-lifetime of the pointee." It is their responsibility to avoid memory unsafety.
+不过，Rust 类型导出到其他语言时，通常会被转换成指针。在 Rust
+中，指针意味着“由使用者管理所指对象的生命周期”。避免内存不安全问题是使用者的责任。
 
-Some level of trust in the user code is thus required, notably around
-use-after-free which Rust can do nothing about. However, some API designs place
-higher burdens than others on the code written in the other language.
+因此，必须在一定程度上信任使用者的代码，尤其是在释放后使用（use-after-free）这类
+Rust 无能为力的问题上。不过，不同的 API
+设计会让其他语言编写的调用代码承担不同程度的责任。
 
-The lowest risk API is the "consolidated wrapper", where all possible
-interactions with an object are folded into a "wrapper type", while keeping the
-Rust API clean.
+风险最低的 API
+是“整合式包装器”：把与一个对象之间所有可能的交互都收拢到某个“包装类型”中，同时保持
+Rust API 本身清晰。
 
-## Code Example
+## 代码示例
 
-To understand this, let us look at a classic example of an API to export:
-iteration through a collection.
+为了理解这一点，我们来看一个导出 API 的经典例子：遍历集合。
 
-That API looks like this:
+这个 API 的工作方式如下：
 
-1. The iterator is initialized with `first_key`.
-2. Each call to `next_key` will advance the iterator.
-3. Calls to `next_key` if the iterator is at the end will do nothing.
-4. As noted above, the iterator is "wrapped into" the collection (unlike the
-   native Rust API).
+1. 通过 `first_key` 初始化迭代器。
+2. 每次调用 `next_key` 都会推进迭代器。
+3. 如果迭代器已到末尾，再调用 `next_key` 将不做任何事情。
+4. 如前所述，迭代器被“包装进了”集合中，这一点不同于 Rust 原生 API。
 
-If the iterator implements `nth()` efficiently, then it is possible to make it
-ephemeral to each function call:
+如果迭代器能够高效实现 `nth()`，就可以让迭代器仅在每次函数调用期间短暂存在：
 
 ```rust,ignore
 struct MySetWrapper {
@@ -59,69 +53,69 @@ impl MySetWrapper {
 }
 ```
 
-As a result, the wrapper is simple and contains no `unsafe` code.
+这样，包装器很简单，也不包含任何 `unsafe` 代码。
 
-## Advantages
+> **译注（学习提示）**：这个实现跨调用保存的是位置，不是借用集合的迭代器，所以它避免了包装器内部的自引用关系。代价取决于
+> `nth`：若每次都从头线性跳过元素，完整遍历会累积成二次复杂度。还要明确遍历期间是否允许修改集合，以及修改会如何影响位置和顺序。即使包装器内部没有
+> `unsafe`，将返回的 `&Key` 再转成 FFI 裸指针时，调用者仍需遵守该引用的有效期。
 
-This makes APIs safer to use, avoiding issues with lifetimes between types. See
-[Object-Based APIs](./export.md) for more on the advantages and pitfalls this
-avoids.
+## 优点
 
-## Disadvantages
+这样可以让 API
+更安全易用，避免类型之间的生命周期问题。有关它的更多优点，以及它能规避的陷阱，请参阅[基于对象的 API](./export.md)。
 
-Often, wrapping types is quite difficult, and sometimes a Rust API compromise
-would make things easier.
+## 缺点
 
-As an example, consider an iterator which does not efficiently implement
-`nth()`. It would definitely be worth putting in special logic to make the
-object handle iteration internally, or to support a different access pattern
-efficiently that only the Foreign Function API will use.
+包装类型往往相当困难；有时对 Rust API 做出一些妥协会让事情更容易。
 
-### Trying to Wrap Iterators (and Failing)
+例如，考虑一个无法高效实现 `nth()`
+的迭代器。为对象添加专门逻辑，让它在内部处理迭代，或者高效支持一种仅供外部函数
+API 使用的访问模式，都是非常值得的。
 
-To wrap any type of iterator into the API correctly, the wrapper would need to
-do what a C version of the code would do: erase the lifetime of the iterator,
-and manage it manually.
+### 尝试包装迭代器，以及为何失败
 
-Suffice it to say, this is *incredibly* difficult.
+要将任意类型的迭代器正确包装进这个 API，包装器就需要像 C
+版本的代码那样：擦除迭代器的生命周期，并手动管理它。
 
-Here is an illustration of just *one* pitfall.
+可以肯定的是，这件事*极其*困难。
 
-A first version of `MySetWrapper` would look like this:
+下面仅展示其中*一个*陷阱。
+
+第一版 `MySetWrapper` 可能如下所示：
 
 ```rust,ignore
 struct MySetWrapper {
     myset: MySet,
     iter_next: usize,
-    // created from a transmuted Box<KeysIter + 'self>
+    // 从经过 transmute 的 Box<KeysIter + 'self> 创建
     iterator: Option<NonNull<KeysIter<'static>>>,
 }
 ```
 
-With `transmute` being used to extend a lifetime, and a pointer to hide it, it's
-ugly already. But it gets even worse: *any other operation can cause Rust
-`undefined behaviour`*.
+这里用 `transmute`
+延长生命周期，再用指针把它隐藏起来，已经很难看了。但问题还不止如此：*任何其他操作都可能导致
+Rust 未定义行为*。
 
-Consider that the `MySet` in the wrapper could be manipulated by other functions
-during iteration, such as storing a new value to the key it was iterating over.
-The API doesn't discourage this, and in fact some similar C libraries expect it.
+设想在迭代期间，其他函数操作了包装器中的
+`MySet`，例如给正在遍历的某个键存入一个新值。这个 API
+并没有阻止此类操作；事实上，一些类似的 C 库还允许这样做。
 
-A simple implementation of `myset_store` would be:
+`myset_store` 的一个简单实现可能是：
 
 ```rust,ignore
 pub mod unsafe_module {
 
-    // other module content
+    // 模块中的其他内容
 
     pub fn myset_store(myset: *mut MySetWrapper, key: datum, value: datum) -> libc::c_int {
-        // DO NOT USE THIS CODE. IT IS UNSAFE TO DEMONSTRATE A PROBLEM.
+        // 不要使用这段代码。这里特意用不安全的代码来演示问题。
 
         let myset: &mut MySet = unsafe {
-            // SAFETY: whoops, UB occurs in here!
+            // SAFETY: 糟糕，这里会发生未定义行为！
             &mut (*myset).myset
         };
 
-        /* ...check and cast key and value data... */
+        /* ...检查并转换键和值的数据... */
 
         match myset.store(casted_key, casted_value) {
             Ok(_) => 0,
@@ -131,30 +125,27 @@ pub mod unsafe_module {
 }
 ```
 
-If the iterator exists when this function is called, we have violated one of
-Rust's aliasing rules. According to Rust, the mutable reference in this block
-must have *exclusive* access to the object. If the iterator simply exists, it's
-not exclusive, so we have `undefined behaviour`! [^1]
+如果调用这个函数时迭代器仍然存在，就违反了 Rust 的一条别名规则。按照 Rust
+的要求，这个块中的可变引用必须能够*独占*访问该对象。只要迭代器仍然存在，访问就不是独占的，于是便出现了未定义行为！[^1]
 
-To avoid this, we must have a way of ensuring that mutable reference really is
-exclusive. That basically means clearing out the iterator's shared reference
-while it exists, and then reconstructing it. In most cases, that will still be
-less efficient than the C version.
+> **译注（原文疑点）**：这里要关注的是仍然有效并可能继续使用的借用，不能简单把“迭代器变量还在作用域中”当作判据。原例把一个借用集合的迭代器跨调用保留下来，随后又创建对同一集合的可变引用，正是危险的组合。正确的先后关系应是：先结束旧迭代器的借用，再独占修改集合，结束这次可变借用后，才重建迭代状态；不能先创建冲突的可变引用，再设法清除旧引用。Rust
+> 的精确别名规则仍在发展，原文“任何其他操作”和“只要存在”的措辞较绝对；只读访问与创建独占可变引用也不能一概而论。参见
+> [Rust Reference 的别名规则概述](https://doc.rust-lang.org/reference/behavior-considered-undefined.html#undefined.alias)。
 
-Some may ask: how can C do this more efficiently? The answer is, it cheats.
-Rust's aliasing rules are the problem, and C simply ignores them for its
-pointers. In exchange, it is common to see code that is declared in the manual
-as "not thread safe" under some or all circumstances. In fact, the
-[GNU C library](https://manpages.debian.org/buster/manpages/attributes.7.en.html)
-has an entire lexicon dedicated to concurrent behavior!
+为了避免这个问题，必须有办法保证可变引用确实是独占的。这基本上意味着：在可变引用存续期间，先清除迭代器持有的共享引用，之后再重建它。大多数情况下，这依然会比
+C 版本低效。
 
-Rust would rather make everything memory safe all the time, for both safety and
-optimizations that C code cannot attain. Being denied access to certain
-shortcuts is the price Rust programmers need to pay.
+有人可能会问：C 为什么可以做得更高效？答案是，它走了捷径。问题出在 Rust
+的别名规则，而 C 的指针根本不理会这些规则。作为代价，C
+代码的手册中常常会说明，它在某些甚至所有情况下“不是线程安全的”。事实上，[GNU C 库](https://manpages.debian.org/buster/manpages/attributes.7.en.html)甚至有一整套专门描述并发行为的术语！
 
-[^1]: For the C programmers out there scratching their heads, the iterator need
-    not be read *during* this code to cause the UB. The exclusivity rule also
-    enables compiler optimizations which may cause inconsistent observations by
-    the iterator's shared reference (e.g. stack spills or reordering
-    instructions for efficiency). These observations may happen *any time after*
-    the mutable reference is created.
+Rust 宁愿始终让一切都保持内存安全，这既是为了安全，也是为了实现 C
+代码无法获得的优化。无法使用某些捷径，就是 Rust 程序员需要付出的代价。
+
+> **译注（学习提示）**：这里的比较强调 Rust 引用带来的额外契约，并不表示 C
+> 没有别名规则，也不表示 `unsafe` Rust 能自动保证安全。`Pin`
+> 至多帮助约束对象移动，不能解除已经存在的共享借用与可变访问之间的冲突；处理这类包装器时，应先决定借用关系和失效规则，再考虑地址稳定性。这也解释了为什么保存索引、稳定句柄或可重建状态，往往比用
+> `transmute` 延长借用更容易验证。
+
+[^1]: 对感到困惑的 C
+    程序员来说，需要注意：即使不在*这段代码执行期间*读取迭代器，也可能引发未定义行为。独占性规则还允许编译器进行优化，例如把寄存器值暂存到栈中，或为了效率而重排指令；这些优化可能让迭代器中的共享引用观察到不一致的结果。这样的观察可能发生在创建可变引用后的*任何时刻*。

@@ -1,8 +1,8 @@
 [book]
-title = "Rust Design Patterns"
+title = "Rust 设计模式"
 authors = ["the rust-unofficial authors"]
-description = "A catalogue of Rust design patterns, anti-patterns and idioms"
-language = "en"
+description = "Rust 设计模式、反模式与惯用法的中文译本（含学习注解）"
+language = "zh-CN"
 src = "src"
 
 [build]

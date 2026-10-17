@@ -1,6 +1,5 @@
-# Structural Patterns
+# 结构型模式
 
-From [Wikipedia](https://en.wikipedia.org/wiki/Structural_pattern):
+摘自[维基百科](https://en.wikipedia.org/wiki/Structural_pattern)：
 
-> Design patterns that ease the design by identifying a simple way to realize
-> relationships among entities.
+> 这类设计模式通过找出实现实体间关系的简单方式，来简化设计。
