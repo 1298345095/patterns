@@ -5,7 +5,9 @@
 > 这是 `1298345095/patterns` 的 `zh-cn` 中文学习分支，依据英文原书独立翻译。
 > 从[全书目录](./src/SUMMARY.md)或[引言](./src/intro.md)开始阅读即可。
 > [译者说明与术语表](./src/translation-notes.md)介绍翻译约定、原文对照方式和阅读建议；
-> [翻译核验记录](./src/translation-review.md)列出覆盖范围与校验结果。
+> [翻译核验记录](./src/translation-review.md)列出初译覆盖范围与校验结果；
+> [Rust 1.99.1 / Edition 2024 审校](./src/stable-audit-1.99.md)总结新版本兼容性问题与现代写法，
+> 配有[仅依赖标准库的自检文件](./checks/rust_2024_smoke.rs)。
 > 正文中的“译注”用于区分原书内容、学习补充和原文疑点。 以下保留原 README
 > 的项目介绍与构建说明；其中在线站点和 PDF 链接指向上游内容。
 

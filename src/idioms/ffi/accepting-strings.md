@@ -71,6 +71,46 @@ pub mod unsafe_module {
 > 类型系统继续跟踪，而不是让编译器替你验证外部内存。调用者还必须保证从指针到终止空字节的整个区域可读、位于同一分配中，并满足长度上限；返回引用的生命周期不能超过该区域实际有效且不被修改的时间。如果日志系统要在函数返回后异步保存消息，就需要复制到自己拥有的存储中。参见
 > [`CStr::from_ptr` 的安全要求](https://doc.rust-lang.org/std/ffi/struct.CStr.html#safety)。
 
+### Rust 1.99.1 / Edition 2024 对照：局部证明与导出符号
+
+> **译注（版本说明）**：上面的 `#[no_mangle]` 保留原文，但在 Rust 2024
+> Edition 中必须写为 `#[unsafe(no_mangle)]`；被导出的名称属于全局符号命名空间，
+> 需要确认不会与其他库的符号冲突。`unsafe fn` 也不再隐式允许函数体内任意不安全操作：
+> `unsafe_op_in_unsafe_fn` 现在默认报警，应把 `CStr::from_ptr` 放进单独的
+> `unsafe {}`，明确局部证明义务。仅添加语法标记**不会**修复无效指针、非 NUL
+> 终止字符串或违反别名规则等问题。参考 [unsafe 属性](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-attributes.html)、
+> [unsafe 函数内的操作](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html)。
+
+以下是可独立使用标准库编译的最小对照例子；返回 `bool` 只演示 UTF-8 检查，
+不是一个完整的日志接口：
+
+```rust
+use std::ffi::{c_char, CStr, CString};
+
+/// # Safety
+/// `msg` 必须非空，指向同一分配中有效且以 NUL 结尾的可读字节；
+/// 在本次调用中不得修改这些字节。
+// SAFETY: 集成到最终程序前须确认此导出符号在链接产物中唯一。
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_patterns_zh_validate_utf8(msg: *const c_char) -> bool {
+    // SAFETY: 由本函数的调用者保证上述指针与内存契约。
+    let message = unsafe { CStr::from_ptr(msg) };
+    message.to_str().is_ok()
+}
+
+fn main() {
+    let msg = CString::new("你好，Rust").unwrap();
+    // SAFETY: CString 在调用结束前一直存活，且不会被修改。
+    assert!(unsafe { rust_patterns_zh_validate_utf8(msg.as_ptr()) });
+}
+```
+
+> **译注（学习提示）**：这里把责任划成三层：导出符号的全局唯一性、
+> 外部调用者对裸指针的保证、函数体中具体的不安全操作。
+> `CStr::from_ptr` 必须扫描终止 NUL；若 C 方已经给出可信长度，
+> 应优先建立**有界**缓冲区协议，并校验长度而非盲目从指针扫描。
+> 若回调或日志系统会在函数返回后保存消息，必须复制到拥有型存储。
+
 ## 优点
 
 这个示例的写法保证了：

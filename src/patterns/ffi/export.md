@@ -166,6 +166,53 @@ pub extern "C" fn dbm_iter_del(*mut DbmKeysIter) {
 }
 ```
 
+### Rust 1.99.1 / Edition 2024 对照：安全的基础句柄契约
+
+> **译注（版本说明）**：上述三个导出函数采用 `#[no_mangle]`，在 Rust 2024
+> Edition 中需改为 `#[unsafe(no_mangle)]`。这仅解决**属性写法**，并不能让原有的
+> 迭代器接口成为 sound API。对于跨语言对象，现代设计仍需分别证明：
+> 指针从哪里来、谁拥有分配、何时失效、是否允许同时读写，以及出错后由谁释放。
+
+下面是一组**独立示例**，只演示创建／释放不透明句柄；
+它没有父对象和迭代器的借用关系，因此不能代替本章需要讨论的生命周期问题。
+
+```rust
+pub struct RustPatternsHandle {
+    _reserved: u8,
+}
+
+// SAFETY: 集成时确保导出的 C 符号在最终链接产物中唯一。
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_patterns_zh_handle_new() -> *mut RustPatternsHandle {
+    Box::into_raw(Box::new(RustPatternsHandle { _reserved: 0 }))
+}
+
+/// # Safety
+/// `handle` 必须为空，或是本 API 返回、尚未释放且无人继续使用的句柄。
+// SAFETY: 集成时确保导出的 C 符号在最终链接产物中唯一。
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_patterns_zh_handle_free(handle: *mut RustPatternsHandle) {
+    if !handle.is_null() {
+        // SAFETY: 调用者保证这是 Box::into_raw 的原始指针，且只释放一次。
+        drop(unsafe { Box::from_raw(handle) });
+    }
+}
+
+fn main() {
+    let handle = rust_patterns_zh_handle_new();
+    // SAFETY: 只有一个句柄所有者，且只调用一次销毁函数。
+    unsafe { rust_patterns_zh_handle_free(handle) };
+}
+```
+
+> **译注（学习提示）**：指向 Rust 私有结构体的指针可作为不透明句柄，
+> 无需把内部字段以 `#[repr(C)]` 暴露给 C。即便 `free` 先检查空指针，
+> 也**无法**检测非空悬垂指针或重复释放：对已经释放的值读字段或取引用可能触发
+> 未定义行为。若需要防止上层误用已释放句柄，可考虑带世代号的句柄表，
+> 但依然要定义跨线程访问与进程级资源生命周期。参见
+> [Rust 2024 不安全属性](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-attributes.html)、
+> [`Box::from_raw` 安全要求](https://doc.rust-lang.org/std/boxed/struct.Box.html#method.from_raw)。
+
 这个 API 丢失了一项关键信息：迭代器的生命周期不能超过拥有它的 `Dbm`
 对象的生命周期。库的使用者可能让迭代器比它所遍历的数据活得更久，从而读取未初始化的内存。
 

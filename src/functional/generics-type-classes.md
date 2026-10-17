@@ -236,6 +236,46 @@ fn main() {
 - 如果不同类型之间的 API
   没有变化，变化的仅仅是行为，则更适合使用[策略模式](../patterns/behavioural/strategy.md)。
 
+### 当前稳定版的泛型表达能力
+
+> **译注（版本说明）**：原书对单态化、泛型类型身份与“类型类”
+> 的讨论仍可学习，但不能据此推断 Rust 缺乏带生命周期参数的
+> 关联类型。**GAT（泛型关联类型）已在 Rust 1.65 稳定**，
+> **trait 中的返回位置 `impl Trait` 已在 Rust 1.75 稳定**；
+> Rust 2024 还调整了返回位置 `impl Trait` 对生命周期参数的
+> 默认捕获规则。它们可以改善借用返回值和 trait API 的表达，
+> 但并不等同于支持任意高阶类型构造器，也不能自动让所有
+> trait 都能做成 `dyn Trait`。
+
+例如 GAT 可把“返回的视图借用 `self`”编码进关联类型：
+
+```rust
+trait ViewSource {
+    type View<'a> where Self: 'a;
+    fn view(&self) -> Self::View<'_>;
+}
+
+struct Bytes(Vec<u8>);
+
+impl ViewSource for Bytes {
+    type View<'a> = &'a [u8] where Self: 'a;
+    fn view(&self) -> Self::View<'_> { &self.0 }
+}
+
+fn main() {
+    let source = Bytes(vec![1, 2, 3]);
+    assert_eq!(source.view(), &[1, 2, 3]);
+}
+```
+
+> **译注（学习提示）**：这仍然是借用约束，不是运行时动态类型：
+> 所返回的切片不能比 `source` 活得更久。设计 API 时要区分
+> “用 GAT 表达借用关系”“用 trait object 做运行时分发”和
+> “用单态化生成具体类型实例”三个独立维度。
+> 参见 [GAT 稳定说明](https://blog.rust-lang.org/2022/10/28/gats-stabilization/)、
+> [RPIT in trait 说明](https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits/)、
+> [2024 `impl Trait` 捕获规则](https://doc.rust-lang.org/reference/types/impl-trait.html#capturing)。
+
 ## 另请参阅
 
 这个模式在标准库中随处可见：

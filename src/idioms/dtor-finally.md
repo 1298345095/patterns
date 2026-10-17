@@ -95,6 +95,36 @@ panic，否则资源可能处于意料之外的状态。
 > 时运行析构函数的描述，也以启用栈展开为前提。参见标准库
 > [`Drop` 的 panic 说明](https://doc.rust-lang.org/std/ops/trait.Drop.html#panics)。
 
+### Rust 2024 对临时值析构顺序的影响
+
+> **译注（版本说明）**：原文关于正常作用域退出与栈展开的叙述，
+> 在 Rust 1.99.1 仍可作为 RAII 的核心直觉；但具体临时值
+> 的析构位置还受到 **Edition** 影响。Rust 2024 缩短了某些
+> `if let` 临时值与块／函数尾表达式临时值的作用域。
+> 不能仅根据花括号外观，假设锁守卫或 `RefCell` 借用会活到同一位置。
+> 这类改变可能影响锁的持有时间、析构副作用或能否通过借用检查。
+
+一个体现 2024 Edition 尾表达式调整的例子是：
+
+```rust
+use std::cell::RefCell;
+
+fn count() -> usize {
+    let data = RefCell::new(vec![1, 2, 3]);
+    data.borrow().len()
+}
+
+fn main() { assert_eq!(count(), 3); }
+```
+
+> 这段尾表达式在 2024 Edition 中，`Ref` 临时借用会先于
+> `data` 被销毁，因此可以通过编译；同样的写法在 2021
+> Edition 下可能报借用超出存活期。反过来，某些依赖旧版块尾临时值
+> 延长的引用表达式，在 2024 Edition 中可能变得不合法。
+> 需要预测精确的释放时机时，可显式绑定守卫，或在期望的位置调用
+> `drop(guard)`（前提是不存在更长的有效借用）。参见
+> [Rust 2024 尾表达式临时值作用域](https://doc.rust-lang.org/edition-guide/rust-2024/temporary-tail-expr-scope.html)。
+
 ## 另请参阅
 
 [RAII 守卫](../patterns/behavioural/RAII.md)。

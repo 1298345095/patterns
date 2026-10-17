@@ -47,6 +47,7 @@ Rust 不是面向对象语言。函数式编程元素、强大的类型系统、
 > **译注（原文疑点）**：这里的“三个主要章节”沿用原文。
 > 当前版本还包含“函数式编程”和“补充资源”等内容，请以[目录](./SUMMARY.md)为准。
 > 本译本的阅读约定与术语见[译者说明](./translation-notes.md)。
+> 对照当前 stable 的技术更新见[2026 年 Rust 兼容性审校](./stable-audit-1.99.md)。
 
 [^1]: <https://www.infoq.com/podcasts/software-architecture-hard-parts/>
     （[存档](https://web.archive.org/web/20240124025806/https://www.infoq.com/podcasts/software-architecture-hard-parts/)）

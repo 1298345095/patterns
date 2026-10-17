@@ -127,6 +127,36 @@ Rust 试图在显式机制与隐式机制之间取得谨慎的平衡，倾向于
 点运算符的自动解引用是一个例外：这里的使用便利性强烈支持采用隐式机制。
 但其设计意图是让隐式处理限于指针的间接层级，而不是任意类型之间的转换。
 
+### Rust 1.86+ 的 trait object 向上转换不是结构体继承
+
+> **译注（版本说明）**：原文关于将来可能加入继承机制的展望
+> 应放回 2015 年历史背景。Rust 1.86 稳定了 **trait object upcasting**：
+> 已知 `Sub: Super` 时，`&dyn Sub` 可以强制转换为 `&dyn Super`，
+> `Arc` 等智能指针上的类似转换也受支持。
+> 这解决的是 trait 对象在父 trait 接口上的动态分发适配，
+> **不提供**“结构体继承字段／实现”或经 `Deref` 模拟子类型的能力。
+
+```rust
+trait Base { fn id(&self) -> u32; }
+trait Extended: Base {}
+struct Record;
+impl Base for Record { fn id(&self) -> u32 { 42 } }
+impl Extended for Record {}
+
+fn upcast(value: &dyn Extended) -> &dyn Base { value }
+
+fn main() {
+    let record = Record;
+    assert_eq!(upcast(&record).id(), 42);
+}
+```
+
+> **译注（学习提示）**：由于两种 `dyn Trait` 对象的 vtable
+> 可能不同，上转型不应理解为“只是复制一个数据指针”。
+> trait 约束、对象安全性（dyn compatibility）、字段复用和
+> 继承语义仍属于不同的设计问题。参见
+> [Rust 1.86 发布说明](https://blog.rust-lang.org/2025/04/03/Rust-1.86.0/#trait-upcasting)。
+
 ## 另请参阅
 
 - [集合也是智能指针](../idioms/deref.md)。

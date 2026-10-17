@@ -338,6 +338,20 @@ trait，因为它的每一种具体实现都需要自己的定制代码，所以
 > 分层的类比来读。参见
 > [`lens` 的 Prism 定义与规律](https://hackage-content.haskell.org/package/lens-5.3.4/docs/Control-Lens-Prism.html)。
 
+> **译注（Rust 1.99.1 版本补充）**：原文把这种设计困难概括为 Rust
+> “不支持某种泛型类型边界”，这一限制没有在示例中形式化，
+> 不宜理解成当前 stable 无法给格式参数建模。
+> GAT（Rust 1.65）、trait 方法返回位置的 `impl Trait`（Rust 1.75）
+> 和 2024 Edition 的精确捕获语法，已经使不少过去难以表达的
+> 借用视图和泛型接口成为可能；不过它们也不自动提供高阶类型构造器、
+> 类型反射或用于任意格式的正确 Serde 协议。
+> 是否能把多种序列化格式统一到一个 API，仍取决于其访问者协议、
+> 错误类型、借用边界与对象安全性等具体约束。
+> 本章更适合作为“尝试设计 API，再检查抽象定律与实现约束”
+> 的案例，而非当前 Rust 不支持 Prism 的证据。
+> 参见 [关联类型与 GAT](https://doc.rust-lang.org/reference/items/associated-items.html#associated-types) 和
+> [`impl Trait` 捕获规则](https://doc.rust-lang.org/reference/types/impl-trait.html#capturing)。
+
 好在前面还有那个 `Visitor` 类型。`Visitor`
 究竟在做什么？它试图让每种数据结构自行定义该如何解析自己。
 

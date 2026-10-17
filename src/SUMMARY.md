@@ -4,6 +4,7 @@
   - [翻译](./translations.md)
   - [译者说明与术语表](./translation-notes.md)
   - [翻译核验记录](./translation-review.md)
+  - [Rust 1.99.1 / 2024 Edition 兼容性审校](./stable-audit-1.99.md)
 - [惯用法](./idioms/index.md)
   - [使用借用类型作为参数](./idioms/coercion-arguments.md)
   - [使用 `format!` 拼接字符串](./idioms/concat-format.md)

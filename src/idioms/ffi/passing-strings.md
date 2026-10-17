@@ -77,6 +77,57 @@ pub mod unsafe_module {
 > `CString::from_vec_with_nul`。以上代码按原文保留。参见
 > [`CString::new`](https://doc.rust-lang.org/std/ffi/struct.CString.html#method.new)。
 
+### Rust 1.99.1 / Edition 2024 对照：声明外部函数与有界缓冲区
+
+> **译注（版本说明）**：上方保留的 `extern "C" { ... }` 属于旧 edition 语法。
+> 在 Rust 2024 Edition，外部声明块必须写成 `unsafe extern "C" { ... }`。
+> 这里的 `unsafe` 是**声明者**对外部符号 ABI、参数及返回值签名正确性的承诺；
+> 具体函数仍默认为不安全调用，只有确认对所有有效参数均安全时，
+> 才能在声明中单独使用 `safe fn`。参见
+> [Rust 2024 外部声明块](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-extern.html)。
+
+```rust,ignore
+// 假设有匹配的 C 库导出 seterr；此片段本身不包含 C 端实现。
+use std::ffi::{c_char, CString, NulError};
+
+unsafe extern "C" {
+    fn seterr(message: *const c_char);
+}
+
+fn report_error(err: &str) -> Result<(), NulError> {
+    let owned = CString::new(err)?;
+    // SAFETY: 假设 C 函数只在调用期间读取指针，不保存、不修改它。
+    unsafe { seterr(owned.as_ptr()) };
+    Ok(())
+}
+```
+
+> **译注（学习提示）**：`CString` 活到调用结束，仅足以应对“同步借用”契约。
+> 若 C 方会保存指针供以后使用，必须另外定义所有权转移、失效通知及释放方式，
+> 不能把 `into_raw` 当成无条件的生命周期修复。对返回的数据，
+> 原例 `geterr` 的返回值究竟是字节数、缓冲区大小还是错误码并不清楚，
+> 所以不存在无需先了解 C 契约的普适修补版。
+
+如果 C 方在**已初始化的固定大小缓冲区内**写入一个 NUL 结尾的字符串，
+可以在确认写入范围与终止符后，用安全的 `from_bytes_until_nul`
+进行有界解析，而不用将未验证的 `c_int` 直接转换成 `usize`：
+
+```rust
+use std::ffi::CStr;
+
+fn decode_c_buffer(bytes: &[u8]) -> Result<&str, Box<dyn std::error::Error>> {
+    let cstr = CStr::from_bytes_until_nul(bytes)?;
+    Ok(cstr.to_str()?)
+}
+
+fn main() {
+    assert_eq!(decode_c_buffer(b"hello\0unused").unwrap(), "hello");
+}
+```
+
+> 这段安全的解码函数**不负责**保证外部函数写入时没有越界；
+> 调用 C 之前仍要核对容量单位、负错误码、返回长度是否包含终止符等约定。
+
 ## 优点
 
 这个示例的写法旨在保证：

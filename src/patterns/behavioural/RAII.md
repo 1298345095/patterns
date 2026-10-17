@@ -115,6 +115,34 @@ fn deref<'a>(&'a self) -> &'a T {
 注意，实现 `Deref` 并不是这个模式的核心，它只是让守卫对象更易于使用。
 在守卫上实现一个 `get` 方法也同样有效。
 
+### 使用 Rust 1.99.1 的标准库守卫
+
+> **译注（版本说明）**：前面的 `MutexGuard` 是保留自原书的概念示意，
+> 不是可编译的互斥锁实现。下面是无需自写 `unsafe` 的标准库对照例子：
+
+```rust
+use std::sync::Mutex;
+
+fn main() {
+    let items = Mutex::new(vec![1]);
+    {
+        let mut guard = items.lock().expect("mutex poisoned");
+        guard.push(2);
+    } // guard 被销毁时解除锁定
+    assert_eq!(*items.lock().unwrap(), vec![1, 2]);
+}
+```
+
+> **译注（学习提示）**：`Mutex::lock` 返回 `LockResult<MutexGuard<_>>`；
+> 遇到毒化状态时，`expect` 会 panic，但不是说底层锁永远不能再使用。
+> 调用方可以基于不变量审查决定是否通过 `PoisonError::into_inner`
+> 继续访问。`Drop` 保证正常退出或发生栈展开时释放守卫，
+> 不保证异常退出、`panic = "abort"` 或 OS 强制终止时运行。
+> 本章引用的 Rust 1.0 风格指南占位页是**历史资料**，
+> 请以当前 [`MutexGuard`](https://doc.rust-lang.org/std/sync/struct.MutexGuard.html)
+> 和 [`Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html)
+> 文档判断现行行为。
+
 ## 另请参阅
 
 [在析构函数中执行收尾工作的惯用法](../../idioms/dtor-finally.md)

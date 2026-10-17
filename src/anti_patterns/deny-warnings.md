@@ -108,6 +108,44 @@
 > 有助于及时发现问题，又不会把同一策略写死在供别人编译的库源码里。
 > 即使如此，升级 CI 的 Rust 版本时，也应预期新增 lint 需要处理。
 
+### 面向 Rust 1.99.1 的 lint 使用建议
+
+> **译注（版本说明）**：上面 `rustc 1.48.0` 时代的白名单应当作为
+> **历史材料**阅读，不应复制为 Rust 1.99.1 的默认配置。诸如
+> `const_err`、`private_in_public` 已是被移除或重构的 lint，
+> 即使编译器暂时接受旧名称，也不能据此认定其规则仍然有效。
+> 当前列表请以本机 `rustc -W help`、
+> [rustc lint 索引](https://doc.rust-lang.org/rustc/lints/listing/index.html)
+> 和 [Clippy lint 索引](https://rust-lang.github.io/rust-clippy/master/) 为准。
+
+如果你能控制项目的 CI，可以将“警告视为错误”只应用于该 CI 的受控工具链：
+
+```sh
+cargo check --all-targets
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
+> **译注（学习提示）**：`--all-features` 不适合具有互斥 feature 的包，
+> 这种包应该测试真实支持的 feature 组合；CI 的 `-D warnings`
+> 在工具链升级时也可能因新增 lint 而失败，需要主动维护。
+> 如果必须局部抑制某个已知 lint，可以添加带原因的 `#[expect(...)]`：
+> 它在该 lint **不再出现**时还会报告 `unfulfilled_lint_expectations`，
+> 比全局 `allow` 更有助于发现技术债已过期。
+
+```rust
+fn main() {
+    #[expect(unused_variables, reason = "后续章节会读取这个临时值")]
+    let sample = 7;
+}
+```
+
+> Rust 2024 Edition 的迁移检查组包含不安全属性、`unsafe extern`
+> 和临时值析构等检查；对**实际 Cargo 项目**可先运行
+> `cargo fix --edition` 再人工审阅，但自动改写不负责审计 FFI
+> 的 soundness。mdBook 文档中的 `rust,ignore` 片段不会被 Cargo
+> 当作项目源文件自动修复。
+> 参考 [Edition 迁移指南](https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html)。
+
 ## 另请参阅
 
 - [全部 Clippy lint 的索引](https://rust-lang.github.io/rust-clippy/master)

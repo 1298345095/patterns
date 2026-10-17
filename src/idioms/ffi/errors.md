@@ -146,6 +146,54 @@ impl From<ParseError> for parse_error {
 > API 设计，代码实际使用的是 `#[repr(C)]`，并非 `#[repr(transparent)]`。参见
 > [Rust `char` 文档](https://doc.rust-lang.org/std/primitive.char.html)。
 
+### Rust 1.99.1 / Edition 2024 对照：错误消息的分配与释放协议
+
+> **译注（版本说明）**：原例 `#[no_mangle]` 在 2024 Edition 中要写成
+> `#[unsafe(no_mangle)]`。仅在 Rust 侧使用 `malloc` 并不能自动解决所有权问题；
+> C 调用者必须知道该使用哪个释放函数，且不能二次释放。下面给出另一种
+> **成对 API** 的最小实现，便于比较。它不是对上面 `DatabaseError` 例子的暗中修复。
+
+```rust
+use std::ffi::{c_char, CString};
+
+/// 分配一条 UTF-8、NUL 结尾的错误消息；返回值由调用者负责释放。
+// SAFETY: 集成时须确认此导出符号不与其他全局符号冲突。
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_patterns_zh_error_text() -> *mut c_char {
+    CString::new("database is read-only")
+        .expect("静态文本不含内嵌 NUL")
+        .into_raw()
+}
+
+/// # Safety
+/// `ptr` 必须为空，或恰为本 API 返回且尚未释放的原始指针；
+/// 指针对应的 C 字符串长度不能被 C 方修改，不能重复释放。
+// SAFETY: 集成时须确认此导出符号不与其他全局符号冲突。
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_patterns_zh_error_text_free(ptr: *mut c_char) {
+    if !ptr.is_null() {
+        // SAFETY: 调用者负责遵守来源、有效性和唯一释放的约定。
+        drop(unsafe { CString::from_raw(ptr) });
+    }
+}
+
+fn main() {
+    let text = rust_patterns_zh_error_text();
+    // SAFETY: 正好释放上一行获取的指针一次。
+    unsafe { rust_patterns_zh_error_text_free(text) };
+}
+```
+
+> **译注（学习提示）**：这组 API 的内存由 Rust 的 `CString` 创建并回收，
+> 不能让 C 侧直接调用 `free`。反过来，若内存由 C 的 `malloc` 分配，
+> 也不能用 `CString::from_raw` 回收。`into_raw` / `from_raw`
+> 配对的另一关键前提是 C 方不能改变 NUL 终止字符串的长度；
+> 否则 Rust 重新接管时可能违反分配元数据要求。
+> 真实 FFI 还应制定错误码与空指针语义、并处理跨 ABI 的 panic
+> （通常不应让 Rust panic 穿过普通 `extern "C"` 边界）。参见
+> [`CString::into_raw`](https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_raw)、
+> [FFI unwind 规则](https://doc.rust-lang.org/reference/panic.html#unwinding-across-ffi-boundaries)。
+
 ## 优点
 
 这样既能让外部语言清晰地访问错误信息，又完全不必牺牲 Rust 代码自身的 API 设计。
